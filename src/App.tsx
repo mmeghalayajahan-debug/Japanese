@@ -41,7 +41,13 @@ const ACTIVITY_LOG = [
 ];
 
 export default function App() {
-  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [profileImage, setProfileImage] = useState<string | null>(() => {
+    // Load from localStorage on initialization
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem("cyberark_profile_image");
+    }
+    return null;
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,7 +55,10 @@ export default function App() {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setProfileImage(reader.result as string);
+        const base64String = reader.result as string;
+        setProfileImage(base64String);
+        // Save to localStorage
+        localStorage.setItem("cyberark_profile_image", base64String);
       };
       reader.readAsDataURL(file);
     }
