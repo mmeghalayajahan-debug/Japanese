@@ -12,15 +12,24 @@
 
 @layer base {
   body {
-    @apply bg-[var(--color-cyber-blue)] text-white/90 selection:bg-cyber-accent/30;
+    @apply bg-[var(--color-cyber-blue)] text-white/90 selection:bg-cyber-accent/30 overflow-x-hidden;
   }
 }
 
 .glass-panel {
-  @apply bg-white/[0.03] backdrop-blur-md border border-[var(--color-cyber-border)] rounded-2xl;
+  @apply bg-white/[0.03] backdrop-blur-md border border-[var(--color-cyber-border)] rounded-2xl shadow-2xl;
 }
 
 .tech-grid {
   background-size: 40px 40px;
-  background-image: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-image: radial-gradient(circle, rgba(0, 168, 232, 0.08) 1px, transparent 1px);
+}
+
+@keyframes scan {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(250%); }
+}
+
+.animate-scan {
+  animation: scan 3s linear infinite;
 }
