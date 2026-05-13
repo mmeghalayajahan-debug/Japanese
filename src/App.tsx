@@ -51,14 +51,37 @@ const USER_DATA = {
 };
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem("cyberark_auth_session") === "true";
+  });
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState(false);
   const [balance, setBalance] = useState<number>(0);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password === "kuyasa.com") {
+      setIsAuthenticated(true);
+      localStorage.setItem("cyberark_auth_session", "true");
+      setLoginError(false);
+    } else {
+      setLoginError(true);
+      setTimeout(() => setLoginError(false), 2000);
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem("cyberark_auth_session");
+  };
+
   // Initialize and check for daily earnings
   useEffect(() => {
+    if (!isAuthenticated) return;
     // 1. Load Profile Image
     const savedImg = localStorage.getItem(KEY_PROFILE_IMG);
     if (savedImg) setProfileImage(savedImg);
@@ -221,6 +244,57 @@ export default function App() {
     visible: { y: 0, opacity: 1 }
   };
 
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center tech-grid bg-[#0A1128] font-sans p-6">
+        <motion.div 
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="glass-panel p-10 w-full max-w-md border-cyber-accent/30 shadow-[0_0_50px_rgba(0,168,232,0.15)]"
+        >
+          <div className="flex flex-col items-center mb-10">
+            <div className="w-16 h-16 bg-cyber-accent rounded-2xl flex items-center justify-center mb-4 shadow-[0_0_30px_rgba(0,168,232,0.4)]">
+              <Shield className="text-[#0A1128]" size={36} />
+            </div>
+            <h1 className="text-2xl font-black tracking-tighter text-white uppercase italic">CyberArk Japan</h1>
+            <p className="text-[10px] text-cyber-accent font-mono uppercase tracking-[0.4em] mt-1 font-bold">Terminal Access Control</p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-white/40 block ml-1">Secure Passkey</label>
+              <div className="relative">
+                <Shield size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" />
+                <input 
+                  type="password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter access code..."
+                  className={`w-full bg-white/5 border ${loginError ? 'border-red-500 ring-1 ring-red-500' : 'border-cyber-border focus:border-cyber-accent focus:ring-1 focus:ring-cyber-accent'} rounded-2xl pl-12 pr-6 py-4 text-sm transition-all focus:outline-none placeholder:text-white/10 font-mono`}
+                />
+              </div>
+              {loginError && <p className="text-[10px] text-red-500 font-bold uppercase tracking-widest text-center mt-2 animate-bounce">Access Denied: Invalid Credentials</p>}
+            </div>
+
+            <button 
+              type="submit"
+              className="w-full bg-cyber-accent hover:bg-[#00D4FF] text-[#0A1128] font-black py-4 rounded-2xl text-xs uppercase tracking-[0.2em] transition-all shadow-[0_0_30px_rgba(0,168,232,0.2)] hover:scale-[1.02] active:scale-[0.98]"
+            >
+              Verify Identity
+            </button>
+          </form>
+
+          <div className="mt-10 pt-6 border-t border-white/5 text-center">
+            <p className="text-[9px] text-white/20 uppercase tracking-widest leading-relaxed">
+              Protected by CyberArk Advanced Systems<br/>
+              Authorized Personnel Only
+            </p>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex tech-grid font-sans selection:bg-cyber-accent/30 bg-[#0A1128] text-white">
       {/* Hidden File Input */}
@@ -268,7 +342,14 @@ export default function App() {
               <p className="text-sm font-bold truncate group-hover:text-cyber-accent transition-colors">{USER_DATA.name}</p>
               <p className="text-[11px] text-white/40 truncate font-mono">ID: {USER_DATA.employeeId}</p>
             </div>
-            <LogOut size={18} className="text-white/30 hover:text-red-400 transition-colors shrink-0" />
+            <LogOut 
+              size={18} 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleLogout();
+              }}
+              className="text-white/30 hover:text-red-400 transition-colors shrink-0" 
+            />
           </div>
         </div>
       </aside>
