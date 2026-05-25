@@ -42,7 +42,7 @@ const USER_DATA = {
   name: "Md Mumin Mia",
   role: "Senior Cyberneticist & Web Developer",
   employeeId: "CAJ-7729-BD",
-  baseBalance: 24750.50,
+  baseBalance: 75000.00,
   office: "Shibuya Sky Tower, Tokyo",
   branch: "CyberArk Japan (サイバーアーク・ジャパン)",
   status: "Senior Elite / Active",
@@ -88,7 +88,6 @@ export default function App() {
 
     // 2. Load Data & Handle History Generation
     const storedBalance = localStorage.getItem(KEY_BALANCE);
-    const lastSync = localStorage.getItem(KEY_LAST_UPDATE);
     const savedTx = localStorage.getItem(KEY_TRANSACTIONS);
 
     let currentBalance = storedBalance ? parseFloat(storedBalance) : USER_DATA.baseBalance;
@@ -96,9 +95,10 @@ export default function App() {
     const now = new Date();
     const nowTs = now.getTime();
     const oneDayMs = 24 * 60 * 60 * 1000;
+    let didReset = false;
 
-    // Generate 6 years of history if none exists
-    if (currentTransactions.length === 0) {
+    // Generate 6 years of history if none exists or balance is not aligned to the $75k target
+    if (currentTransactions.length === 0 || Math.abs(currentBalance - 75000.00) > 10.0) {
       const history: Transaction[] = [];
       const startDate = new Date(USER_DATA.joined);
       let tempBalance = 0;
@@ -161,48 +161,67 @@ export default function App() {
 
         iterDate.setMonth(iterDate.getMonth() + 1);
       }
+
+      // Adjust salaries so the final balance is exactly 75000.00
+      const salaries = history.filter(t => t.type === 'salary');
+      const difference = 75000.00 - tempBalance;
+      const adjustmentPerSalary = difference / salaries.length;
+      
+      salaries.forEach(s => {
+        s.amount += adjustmentPerSalary;
+      });
+
       currentTransactions = history;
-      currentBalance = tempBalance; 
+      currentBalance = 75000.00;
+      didReset = true;
+
+      // Force save the new target dataset
+      localStorage.setItem(KEY_BALANCE, "75000.00");
+      localStorage.setItem(KEY_TRANSACTIONS, JSON.stringify(history));
+      localStorage.setItem(KEY_LAST_UPDATE, nowTs.toString());
     }
 
-    if (lastSync) {
-      const lastSyncTime = parseInt(lastSync);
-      const diffMs = nowTs - lastSyncTime;
-      
-      if (diffMs >= oneDayMs) {
-        setIsSyncing(true);
-        const daysPassed = Math.floor(diffMs / oneDayMs);
-        let totalEarnings = 0;
-        const newDailyTxs: Transaction[] = [];
+    if (!didReset) {
+      const lastSync = localStorage.getItem(KEY_LAST_UPDATE);
+      if (lastSync) {
+        const lastSyncTime = parseInt(lastSync);
+        const diffMs = nowTs - lastSyncTime;
         
-        for (let i = 1; i <= daysPassed; i++) {
-          const earningDate = new Date(lastSyncTime + (i * oneDayMs));
-          const dailyAmount = Math.floor(Math.random() * (30 - 20 + 1)) + 20;
-          totalEarnings += dailyAmount;
+        if (diffMs >= oneDayMs) {
+          setIsSyncing(true);
+          const daysPassed = Math.floor(diffMs / oneDayMs);
+          let totalEarnings = 0;
+          const newDailyTxs: Transaction[] = [];
           
-          newDailyTxs.unshift({
-            id: `daily-${earningDate.getTime()}`,
-            type: 'salary',
-            amount: dailyAmount,
-            description: "Daily Production Node Credit",
-            date: earningDate.toISOString().split('T')[0],
-            ref: `NODE-${Math.random().toString(36).substring(7).toUpperCase()}`
-          });
-        }
+          for (let i = 1; i <= daysPassed; i++) {
+            const earningDate = new Date(lastSyncTime + (i * oneDayMs));
+            const dailyAmount = Math.floor(Math.random() * (30 - 20 + 1)) + 20;
+            totalEarnings += dailyAmount;
+            
+            newDailyTxs.unshift({
+              id: `daily-${earningDate.getTime()}`,
+              type: 'salary',
+              amount: dailyAmount,
+              description: "Daily Production Node Credit",
+              date: earningDate.toISOString().split('T')[0],
+              ref: `NODE-${Math.random().toString(36).substring(7).toUpperCase()}`
+            });
+          }
 
-        currentBalance += totalEarnings;
-        currentTransactions = [...newDailyTxs, ...currentTransactions];
-        
-        localStorage.setItem(KEY_BALANCE, currentBalance.toString());
+          currentBalance += totalEarnings;
+          currentTransactions = [...newDailyTxs, ...currentTransactions];
+          
+          localStorage.setItem(KEY_BALANCE, currentBalance.toString());
+          localStorage.setItem(KEY_LAST_UPDATE, nowTs.toString());
+          localStorage.setItem(KEY_TRANSACTIONS, JSON.stringify(currentTransactions));
+          
+          setTimeout(() => setIsSyncing(false), 2000);
+        }
+      } else {
         localStorage.setItem(KEY_LAST_UPDATE, nowTs.toString());
+        localStorage.setItem(KEY_BALANCE, currentBalance.toString());
         localStorage.setItem(KEY_TRANSACTIONS, JSON.stringify(currentTransactions));
-        
-        setTimeout(() => setIsSyncing(false), 2000);
       }
-    } else {
-      localStorage.setItem(KEY_LAST_UPDATE, nowTs.toString());
-      localStorage.setItem(KEY_BALANCE, currentBalance.toString());
-      localStorage.setItem(KEY_TRANSACTIONS, JSON.stringify(currentTransactions));
     }
 
     setBalance(currentBalance);
@@ -418,11 +437,18 @@ export default function App() {
                   </div>
                 </div>
                 <p className="text-sm text-white/40 mb-2 font-medium tracking-wide uppercase">Current Balance</p>
-                <div className="flex items-baseline gap-2 mb-8">
-                  <span className="text-3xl text-cyber-accent font-mono font-bold">$</span>
-                  <h3 className="text-5xl font-mono font-bold text-white tracking-tighter">
-                    {balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </h3>
+                <div className="space-y-2.5 mb-8">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl text-cyber-accent font-mono font-bold">$</span>
+                    <h3 className="text-5xl font-mono font-bold text-white tracking-tighter">
+                      {balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-mono font-black bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-xl w-fit">
+                    <span className="shrink-0 text-sm">৳</span>
+                    <span>{(balance * 117.33333).toLocaleString('en-IN', { minimumFractionDigits: 2 })} BDT</span>
+                    <span className="text-[10px] text-white/50 font-sans font-normal ml-1 border-l border-emerald-500/20 pl-1.5">৮৮ লক্ষ টাকা সমতুল্য</span>
+                  </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4 mb-8">
